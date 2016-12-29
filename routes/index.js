@@ -3,9 +3,11 @@ var router = express.Router();
 var multiparty = require('multiparty');
 
 /* GET home page. */
-router.get('/', function(req, res, next) {
+router.get('/', function (req, res, next) {
     console.log(".....");
-    res.render('index', { title: 'Express' });
+    res.render('index', {
+        title: 'Express'
+    });
 });
 
 /**
@@ -15,7 +17,7 @@ router.get('/', function(req, res, next) {
  * @param  {multiparty} next) {               var form [description]
  * @return {[type]}           [description]
  */
-router.post('/upload', function(req, res, next) {
+router.post('/upload', function (req, res, next) {
     var form = new multiparty.Form();
     // form.on('error', function(err) {
     //     console.log('Error parsing form: ' + err.stack);
@@ -23,11 +25,14 @@ router.post('/upload', function(req, res, next) {
     form.encoding = 'utf-8';
     form.uploadDir = "public/uploads/images/";
     form.maxFilesSize = 2 * 1024 * 1024;
-    form.parse(req, function(err, fields, files) {
+    form.parse(req, function (err, fields, files) {
         console.log("文件说明" + fields.fileRemark[0])
         console.log("文件路径：" + files.file[0].path);
         console.log("文件大小：" + files.file[0].size)
-        res.json({ "url": "http://localhost:3000/" + files.file[0].path.replace("public\\", "").replace(/\\/g, "\/"), "alt": fields.fileRemark[0] })
+        res.json({
+            "url": "http://localhost:3000/" + files.file[0].path.replace("public\\", "").replace(/\\/g, "\/"),
+            "alt": fields.fileRemark[0]
+        })
     });
 });
 
