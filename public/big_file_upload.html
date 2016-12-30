@@ -6,23 +6,23 @@
     <title>大文件断点续传</title>
     <link rel="stylesheet" type="text/css" href="http://apps.bdimg.com/libs/bootstrap/3.3.4/css/bootstrap.css">
     <style type="text/css" media="screen">
-        body,
-        html {
-            margin: 0;
-            padding: 0;
-        }
-        
-        #cantainer {
-            margin: 100px auto;
-            width: 660px;
-            height: auto;
-        }
+    body,
+    html {
+        margin: 0;
+        padding: 0;
+    }
+    
+    #cantainer {
+        margin: 100px auto;
+        width: 660px;
+        height: auto;
+    }
     </style>
 </head>
 
 <body>
     <div id="cantainer">
-        <form>
+        <form enctype="multipart/form-data" method="post" id="myform">
             <div class="form-group">
                 <input type="file" id="uploadFiles" multiple>
             </div>
@@ -34,7 +34,9 @@
                     <th>文件类型</th>
                     <th>大小</th>
                     <th>上传进度</th>
-                    <th><button class="btn btn-default" id="uploadAll">全部上传</button></th>
+                    <th>
+                        <button class="btn btn-default" id="uploadAll">全部上传</button>
+                    </th>
                 </tr>
             </table>
         </div>
@@ -42,68 +44,63 @@
     <script type="text/javascript" src="http://apps.bdimg.com/libs/jquery/1.9.1/jquery.js"></script>
     <script type="text/javascript" src="http://apps.bdimg.com/libs/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script type="text/javascript">
-    function fileUpload() { 
-         var filelist=$("#uploadFiles")[0].files[0];//获取用户选择上传的文件
-        var datas=new FormData();
-            datas.append("file", filelist.slice(0,100));
-            datas.append("fileRemark", $('#fileRemark').val());
-            console.log(datas)
-            $.ajax({
-                type: 'post',
-                dataType: 'json',
-                url: 'http://localhost:3000/load',
-                data: datas,
-                contentType: false,
-                processData: false,
-                success: function(data, textStatus) {
-                    $("#img").attr("src", data.url);
-                    $("#remark").html(data.alt);
-                },
-                error: function(XMLHttpRequest, textStatus, errorThrown) {
-                    console.log(errorThrown)
-                }
-            });
+    function fileUpload() {
+        var filelist = $("#uploadFiles")[0].files[0]; //获取用户选择上传的文件
+        var formData = new FormData();
+        formData.append("file", filelist);
+        formData.append("fileRemark", 123123123);
+        formData.append("dadasdasds", 3123123123123);
+        console.log(formData)
+        $.ajax({
+            type: 'post',
+            dataType: 'json',
+            url: 'http://localhost:3000/load',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(data, textStatus) {
+                $("#img").attr("src", data.url);
+                $("#remark").html(data.alt);
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+                console.log(errorThrown)
+            }
+        });
     };
 
     /**
-    **加载文件，并且计算文件的大小
-    **/
-    function loadFiles(){
-            var filelist=$("#uploadFiles")[0].files;//获取用户选择上传的文件
-            var tableHtml="";
-            for(var i=0,len=filelist.length;i<len;i++){
-                    tableHtml+="<tr>";
-                    tableHtml+="<td>"+filelist[i].name+"</td>";
-                    tableHtml+="<td>"+filelist[i].type+"</td>";
-                    tableHtml+="<td>"+computedFileSize(filelist[i].size)+"</td>";
-                    tableHtml+="<td>0%</td>";
-                    tableHtml+="<td><button class='btn btn-default' onclick='fileUpload()'>开始上传</button></td>";
-                    tableHtml+="</tr>";
-            }
-            $(".table").append(tableHtml);
+     **加载文件，并且计算文件的大小
+     **/
+    function loadFiles() {
+        var filelist = $("#uploadFiles")[0].files; //获取用户选择上传的文件
+        var tableHtml = "";
+        for (var i = 0, len = filelist.length; i < len; i++) {
+            tableHtml += "<tr>";
+            tableHtml += "<td>" + filelist[i].name + "</td>";
+            tableHtml += "<td>" + filelist[i].type + "</td>";
+            tableHtml += "<td>" + computedFileSize(filelist[i].size) + "</td>";
+            tableHtml += "<td>0%</td>";
+            tableHtml += "<td><button class='btn btn-default' onclick='fileUpload()'>开始上传</button></td>";
+            tableHtml += "</tr>";
+        }
+        $(".table").append(tableHtml);
     }
 
     /**
-    **计算文件大小
-    **/
-    function computedFileSize(size){
-        var size = size > 1024
-            ? size / 1024  > 1024
-            ? size / (1024 * 1024) > 1024
-            ? (size / (1024 * 1024 * 1024)).toFixed(2) + 'GB'
-            : (size / (1024 * 1024)).toFixed(2) + 'MB'
-            : (size / 1024).toFixed(2) + 'KB'
-            : (size).toFixed(2) + 'B';
+     **计算文件大小
+     **/
+    function computedFileSize(size) {
+        var size = size > 1024 ? size / 1024 > 1024 ? size / (1024 * 1024) > 1024 ? (size / (1024 * 1024 * 1024)).toFixed(2) + 'GB' : (size / (1024 * 1024)).toFixed(2) + 'MB' : (size / 1024).toFixed(2) + 'KB' : (size).toFixed(2) + 'B';
         return size;
     }
 
     $(document).ready(function() {
         $("#uploadAll").click(function() {
-            fileUpload();
+            // fileUpload();
         });
 
-        $("#uploadFiles").change(function(){
-                loadFiles();
+        $("#uploadFiles").change(function() {
+            loadFiles();
         })
     });
     </script>
