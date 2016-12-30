@@ -1,9 +1,10 @@
 var express = require('express');
 var router = express.Router();
 var multiparty = require('multiparty');
+var fs = require('fs');
 
 /* GET home page. */
-router.get('/', function (req, res, next) {
+router.get('/', function(req, res, next) {
     console.log(".....");
     res.render('index', {
         title: 'Express'
@@ -11,22 +12,21 @@ router.get('/', function (req, res, next) {
 });
 
 /**
- * 文件上传
+ * 文件上传multiparty
  * @param  {[type]}     req   [description]
  * @param  {[type]}     res   [description]
  * @param  {multiparty} next) {               var form [description]
  * @return {[type]}           [description]
  */
-router.post('/upload', function (req, res, next) {
+router.post('/upload', function(req, res, next) {
     var form = new multiparty.Form();
-
-    form.on('error', function (err) {
+    form.on('error', function(err) {
         console.log('Error parsing form: ' + err.stack);
     });
     form.encoding = 'utf-8';
     form.uploadDir = "public/uploads/images/";
     form.maxFilesSize = 2 * 1024 * 1024;
-    form.parse(req, function (err, fields, files) {
+    form.parse(req, function(err, fields, files) {
         console.log("文件说明" + fields.fileRemark[0])
         console.log("文件路径：" + files.file[0].path);
         console.log("文件大小：" + files.file[0].size)
@@ -35,57 +35,120 @@ router.post('/upload', function (req, res, next) {
             "alt": fields.fileRemark[0]
         })
     });
-
 });
 
-
-
-
-router.post("/load", function (req, res, next) {
+/**
+ * 断点续传的方法
+ * @param  {[type]}     req   [description]
+ * @param  {[type]}     res   [description]
+ * @param  {multiparty} next) {               var form [description]
+ * @return {[type]}           [description]
+ */
+router.post("/load", function(req, res, next) {
     var form = new multiparty.Form();
-    var count;
-    form.encoding = 'utf-8';
-    form.uploadDir = "public/uploads/images/";
-    form.maxFilesSize = 2 * 1024 * 1024;
-    form.on('error', function (err) {
-        console.log('Error parsing form: ' + err.stack);
+    var count = 0;
+    var fileName = "";
+    var isLastChunk = true;
+    var chunkImgData = null; //分块数据
+    var chunks = [];
+    var size = 0;
+    form.on('error', function(err) {
+        console.error('Error parsing form: ' + err.stack);
     });
 
-    // Parts are emitted when parsing the form 
-    form.on('part', function (part) {
-        // You *must* act on the part by reading it 
-        // NOTE: if you want to ignore it, just call "part.resume()" 
-        if (!part.filename) {
-            // filename is not defined when this is a field and not a file 
-            console.log('got field named ' + part.name);
-            // ignore field's content 
-            part.resume();
+    //获取表单的文本字段
+    form.on("field", function(name, value) {
+        console.log(name + "       >>>>>>>>>>>>>>>" + value)
+        if (name = "fileRemark") {
+            fileName = value;
         }
-        
-        if (part.filename) {
-            // filename is defined when this is a file 
-            count++;
-            console.log('got file named ' + part.name);
-            // ignore file's content here 
+    });
+
+    //拿到分段上传的数据    
+    form.on('part', function(part) {
+
+        // console.log(part);
+        console.log("图片名称:>>>>>>>>>>>>>>>>:" + part.filename + ">>>>>>" + part.name)
+            // Object.keys(part).forEach(function(name) {
+            //     console.log('>>>>>>>>>>> ' + name);
+            // });
+
+        if (!part.filename) {
+            console.log('got field named ' + part.name);
             part.resume();
         }
 
-        part.on('error', function (err) {
-            // decide what to do 
+        if (part.filename) {
+            count++;
+            console.log('got file named ' + part.name);
+            part.resume();
+        }
+
+        chunks = [];
+        size = 0;
+        //分段数据在part的data事件中获取，一次请求中的数据会放分成多个buffer，所以需要一个imgFile数组累加
+        part.on("data", function(chunk) {
+            console.log(fileName);
+            if (chunk.length === 0) {
+                return;
+            }
+            chunks.push(chunk);
+            size += chunk.length;
+        });
+
+        //分段数据结束
+        part.on("end", function() {
+            chunkImgData = bufferUtils(chunks, size);
+        });
+
+        part.on('error', function(err) {
+            console.error(err);
         });
     });
 
     // Close emitted after form parsed 
-    form.on('close', function () {
+    form.on('close', function() {
+        var filename = "E:\\express-demo\\uploads\\" + fileName + ".jpg";
+        saveFile(filename, chunkImgData,size);
         console.log('Upload completed!');
     });
 
-    // Parse req 
     form.parse(req);
+    
+});
 
+/**
+ * 写数据到文件
+ * @param  {[type]} path [description]
+ * @param  {[type]} data [description]
+ * @param  {[type]} size [description]
+ * @return {[type]}      [description]
+ */
+function saveFile(path, data,size) {
+    fs.open(path, 'a', function(err, fd) {
+        if (err) {
+            throw err;
+        }
+        fs.write(fd, data, 0, size, function() {
+            fs.close(fd);
+        })
+    })
+}
 
-})
-
-
+/**
+ * buffer组装的工具类
+ * @param  {[type]} chunks [description]
+ * @param  {[type]} size   [description]
+ * @return {[type]}        [description]
+ */
+function bufferUtils(chunks, size) {
+    var data = new Buffer(size);
+    for (var i = 0, pos = 0, l = chunks.length; i < l; i++) {
+        var chunk = chunks[i];
+        chunk.copy(data, pos);
+        pos += chunk.length;
+    }
+    return data;
+}
 
 module.exports = router;
