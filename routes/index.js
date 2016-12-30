@@ -75,20 +75,19 @@ router.post("/load", function(req, res, next) {
 
         if (!part.filename) {
             console.log('got field named ' + part.name);
-            part.resume();
+            // part.resume();
         }
 
         if (part.filename) {
             count++;
             console.log('got file named ' + part.name);
-            part.resume();
+            // part.resume();
         }
 
         chunks = [];
         size = 0;
         //分段数据在part的data事件中获取，一次请求中的数据会放分成多个buffer，所以需要一个imgFile数组累加
         part.on("data", function(chunk) {
-            console.log(fileName);
             if (chunk.length === 0) {
                 return;
             }
