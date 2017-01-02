@@ -44,29 +44,97 @@
     <script type="text/javascript" src="http://apps.bdimg.com/libs/jquery/1.9.1/jquery.js"></script>
     <script type="text/javascript" src="http://apps.bdimg.com/libs/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script type="text/javascript">
-    function fileUpload() {
-        var filelist = $("#uploadFiles")[0].files[0]; //获取用户选择上传的文件
-        var formData = new FormData();
-        formData.append("file", filelist);
-        formData.append("fileRemark", 123123123);
-        formData.append("dadasdasds", 3123123123123);
-        console.log(formData)
-        $.ajax({
-            type: 'post',
-            dataType: 'json',
-            url: 'http://localhost:3000/load',
-            data: formData,
-            contentType: false,
-            processData: false,
-            success: function(data, textStatus) {
-                $("#img").attr("src", data.url);
-                $("#remark").html(data.alt);
-            },
-            error: function(XMLHttpRequest, textStatus, errorThrown) {
-                console.log(errorThrown)
+    /**
+     * 通过文件名获取文件
+     * @param  {[type]} fileName [description]
+     * @return {[type]}          [description]
+     */
+    function getFileByFileName(fileName) {
+        var filelist = $("#uploadFiles")[0].files; //获取用户选择上传的文件列表
+        var file;
+        for (var i = 0, len = filelist.length; i < len; i++) {
+            if (filelist[i] === fileName) {
+                file = filelist[i];
+                break;
             }
-        });
+        }
+        return file ? file : [];
+    }
+
+    /**
+     * 上传的方法
+     * @return {[type]} [description]
+     */
+    function fileUpload() {
+        var totalSize = $(this).attr("data-size"); //文件的总大小
+        var chunk = 0; //当前上传到第几块分片
+        var size = 1024; //每次上传的长度
+        var isPaused = false; //是否暂停
+        var isLastChunk = false; //是否是最后一段
+        var chunks = math.ceil(totalSize / chunk); //一共可以分多少段
+        var percent = 0; //上传的百分比
+
+        /**
+         * 开始上传
+         * @param  {[type]} flag 标记是否是第一次上传
+         * @return {[type]}      [description]
+         */
+        var startUpload = function(flag) {
+
+            if (flag === "firsr" || isLastChunk === true) { //如果是第一次上传
+                chunck = 0;
+                isLastChunk = false;
+                chunk = window.localStorge.setItem(fileName + "_chunk", 0);
+            }
+
+            //取出当前的分片
+            chunk = window.localStorge.getItem(fileName + "_chunk");
+
+            isLastChunk = (chunks - chunk) === 1 ? true : false;
+            //上传的分片的开始位置
+            var begin = chunk * size;
+            //上传分片的结束位置
+            var end = (chunk + 1) * size > totalSize ? totalSize : (chunk + 1) * size;
+
+            var uploadData = new FormData();
+            uploadData.append("file");
+            uploadData.append("isLastChunk", isLastChunk);
+            uploadData.append("totalSize", totalSize);
+            uploadData.append("isFirstUpload", flag);
+
+            //ajax上传
+            $.ajax({
+                type: 'post',
+                dataType: 'json',
+                url: 'http://localhost:3000/load',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(data, textStatus) {
+                    window.localStorge.setItem(fileName + "_chunk", ++chunk);
+                    startUpload();
+
+                },
+                error: function(XMLHttpRequest, textStatus, errorThrown) {
+                    console.log(errorThrown)
+                }
+            });
+        };
+
+
+
+
+
+
+
+
+
+
     };
+
+
+
+
 
     /**
      **加载文件，并且计算文件的大小
@@ -76,10 +144,10 @@
         var tableHtml = "";
         for (var i = 0, len = filelist.length; i < len; i++) {
             tableHtml += "<tr>";
-            tableHtml += "<td>" + filelist[i].name + "</td>";
+            tableHtml += "<td id='" + filelist[i].name + "'>" + filelist[i].name + "</td>";
             tableHtml += "<td>" + filelist[i].type + "</td>";
             tableHtml += "<td>" + computedFileSize(filelist[i].size) + "</td>";
-            tableHtml += "<td>0%</td>";
+            tableHtml += "<td id='id-" + i + "'>0%</td>";
             tableHtml += "<td><button class='btn btn-default' onclick='fileUpload()'>开始上传</button></td>";
             tableHtml += "</tr>";
         }
