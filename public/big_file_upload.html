@@ -51,9 +51,10 @@
      */
     function getFileByFileName(fileName) {
         var filelist = $("#uploadFiles")[0].files; //获取用户选择上传的文件列表
+		console.log(filelist)
         var file;
         for (var i = 0, len = filelist.length; i < len; i++) {
-            if (filelist[i] === fileName) {
+            if (filelist[i].name === fileName) {
                 file = filelist[i];
                 break;
             }
@@ -65,55 +66,74 @@
      * 上传的方法
      * @return {[type]} [description]
      */
-    function fileUpload() {
-        var totalSize = $(this).attr("data-size"); //文件的总大小
+    function fileUpload(fileName) {
+		var file=getFileByFileName(fileName);
+        var totalSize = file.size; //文件的总大小
         var chunk = 0; //当前上传到第几块分片
-        var size = 1024; //每次上传的长度
+        var size = 10240; //每次上传的长度
         var isPaused = false; //是否暂停
         var isLastChunk = false; //是否是最后一段
-        var chunks = math.ceil(totalSize / chunk); //一共可以分多少段
+        var chunks = Math.ceil(totalSize / size); //一共可以分多少段
+		console.log(totalSize+"   "+size)
         var percent = 0; //上传的百分比
-
+		var timer=null;
         /**
          * 开始上传
          * @param  {[type]} flag 标记是否是第一次上传
          * @return {[type]}      [description]
          */
-        var startUpload = function(flag) {
-
-            if (flag === "firsr" || isLastChunk === true) { //如果是第一次上传
+		startUpload("first");
+        function startUpload(flag) {
+            if (flag === "first" || isLastChunk === true) { //如果是第一次上传
                 chunck = 0;
                 isLastChunk = false;
-                chunk = window.localStorge.setItem(fileName + "_chunk", 0);
+                chunk = localStorage.setItem(fileName + "_chunk", 0);
             }
 
             //取出当前的分片
-            chunk = window.localStorge.getItem(fileName + "_chunk");
-
-            isLastChunk = (chunks - chunk) === 1 ? true : false;
+            chunk = localStorage.getItem(fileName + "_chunk");
+			//是否是当前文件的最后一个分片
+            isLastChunk = ((chunks - chunk) === 1) ? true : false;
+			if(isLastChunk===true){
+				clearInterval(timer);
+			}
+			console.log(chunks+">>>>>>>>>>>>>>>>>>>"+parseInt(chunk)+"          "+isLastChunk)
             //上传的分片的开始位置
             var begin = chunk * size;
             //上传分片的结束位置
-            var end = (chunk + 1) * size > totalSize ? totalSize : (chunk + 1) * size;
+            var end = ((parseInt(chunk) + 1) * size > totalSize) ? totalSize : ((parseInt(chunk) + 1) * size);
+			
+			console.log(chunk+"++++++++++++"+begin+"   -------------      "+end+"      >>"+(parseInt(chunk) + 1)+">>>>>>>>>>"+totalSize)
+            
+			//上传百分比
+			percent=parseFloat((end/totalSize*100).toString()).toFixed(2);
+		
+			console.log($("#id-"+fileName.replace(/\..*?$/,"")).html())
+			$("#id-"+fileName.replace(/\..*?$/,"")).html(percent+"%");
 
-            var uploadData = new FormData();
-            uploadData.append("file");
+			//分片上传对象
+			var uploadData = new FormData();
+            uploadData.append("file",file.slice(begin,end));
+			uploadData.append("fileName",fileName);
             uploadData.append("isLastChunk", isLastChunk);
             uploadData.append("totalSize", totalSize);
-            uploadData.append("isFirstUpload", flag);
+            uploadData.append("isFirstUpload", "not-first");
 
-            //ajax上传
+            //ajax文件上传
             $.ajax({
                 type: 'post',
                 dataType: 'json',
                 url: 'http://localhost:3000/load',
-                data: formData,
+                data: uploadData,
                 contentType: false,
                 processData: false,
                 success: function(data, textStatus) {
-                    window.localStorge.setItem(fileName + "_chunk", ++chunk);
-                    startUpload();
-
+                    localStorage.setItem(fileName + "_chunk", ++chunk);
+                    if(timer===null){
+						timer=setInterval(function(){
+							startUpload("");
+						},100);
+					}
                 },
                 error: function(XMLHttpRequest, textStatus, errorThrown) {
                     console.log(errorThrown)
@@ -135,8 +155,8 @@
             tableHtml += "<td id='" + filelist[i].name + "'>" + filelist[i].name + "</td>";
             tableHtml += "<td>" + filelist[i].type + "</td>";
             tableHtml += "<td>" + computedFileSize(filelist[i].size) + "</td>";
-            tableHtml += "<td id='id-" + i + "'>0%</td>";
-            tableHtml += "<td><button class='btn btn-default' onclick='fileUpload()'>开始上传</button></td>";
+            tableHtml += "<td><span id='id-" + filelist[i].name.replace(/\..*?$/,"") + "'>dasda</span></td>";
+            tableHtml += "<td><button class='btn btn-default' onclick=\"fileUpload('"+filelist[i].name+"')\" data-size=\""+computedFileSize(filelist[i].size)+"\">开始上传</button></td>";
             tableHtml += "</tr>";
         }
         $(".table").append(tableHtml);
@@ -152,7 +172,7 @@
 
     $(document).ready(function() {
         $("#uploadAll").click(function() {
-            // fileUpload();
+             fileUpload();
         });
 
         $("#uploadFiles").change(function() {

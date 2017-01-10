@@ -45,10 +45,11 @@ router.post('/upload', function(req, res, next) {
  * @return {[type]}           [description]
  */
 router.post("/load", function(req, res, next) {
+	console.log("断点续传......");
     var form = new multiparty.Form();
     var count = 0;
     var fileName = "";
-    var isLastChunk = true;
+    var isLastChunk = false;
     var chunkImgData = null; //分块数据
     var chunks = [];
     var size = 0;
@@ -59,14 +60,15 @@ router.post("/load", function(req, res, next) {
     //获取表单的文本字段
     form.on("field", function(name, value) {
         console.log(name + "       >>>>>>>>>>>>>>>" + value)
-        if (name = "fileRemark") {
+        if (name === "fileName") {
             fileName = value;
-        }
+        }else if(name==="isLastChunk"){
+			isLastChunk=value;
+		}
     });
 
     //拿到分段上传的数据    
     form.on('part', function(part) {
-
         // console.log(part);
         console.log("图片名称:>>>>>>>>>>>>>>>>:" + part.filename + ">>>>>>" + part.name)
             // Object.keys(part).forEach(function(name) {
@@ -107,12 +109,14 @@ router.post("/load", function(req, res, next) {
 
     // Close emitted after form parsed 
     form.on('close', function() {
-        var filename = "E:\\express-demo\\uploads\\" + fileName + ".jpg";
+		console.log("================================="+fileName)
+        var filename = "E:\\express-demo\\uploads\\" + fileName;
         saveFile(filename, chunkImgData,size);
         console.log('Upload completed!');
     });
 
     form.parse(req);
+	res.json({"success":true})
     
 });
 
